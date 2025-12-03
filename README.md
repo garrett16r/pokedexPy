@@ -7,8 +7,9 @@ Data is pulled from the amazing [PokeAPI](https://pokeapi.co) project.
 
 # Setup
 1. Clone the repository (`git clone https://github.com/garrett16r/pokedexPy.git`)
-2. Run `uv sync` to create the virtual environment and install dependencies
-3. Use `uv run pokedex.py [pokemon_name]` to pull Pokemon data
+2. For the easiest setup, install [astral-sh/uv](https://github.com/astral-sh/uv)
+3. Run `uv sync` to create the virtual environment and install dependencies
+4. Use `uv run pokedex.py [pokemon_name]` to pull Pokemon data
 
 ## Notes
 - On first run, two folders will be created in the same directory as pokedex.py
