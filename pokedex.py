@@ -97,7 +97,7 @@ def normalize_name(raw_name: str) -> tuple[str, str]:
 
     return (api_pokemon_name, pretty_pokemon_name)
 
-def valid_pokemon_name(api_pokemon_name: str, pokemon_names_file: Path) -> bool:
+def is_valid_pokemon_name(api_pokemon_name: str, pokemon_names_file: Path) -> bool:
     with open(pokemon_names_file, "r", encoding="utf-8") as f:
         for name in f:
             name = name.rstrip("\n")
@@ -105,7 +105,7 @@ def valid_pokemon_name(api_pokemon_name: str, pokemon_names_file: Path) -> bool:
 
     return False
 
-def check_cache(api_pokemon_name: str, cache_dir: Path) -> bool:
+def is_cached(api_pokemon_name: str, cache_dir: Path) -> bool:
     cache_file = cache_dir / f"{api_pokemon_name}.json"
 
     if cache_file.exists(): return True
@@ -192,9 +192,9 @@ def main():
         return
     
     raw_name = " ".join(sys.argv[1:])
-
     api_pokemon_name, pretty_pokemon_name = normalize_name(raw_name) # api_pokemon_name is formatted for the API call, pretty_pokemon_name is formatted for human readability
-    if not valid_pokemon_name(api_pokemon_name, pokemon_names_file):
+    
+    if not is_valid_pokemon_name(api_pokemon_name, pokemon_names_file):
         print(f"ERROR: Invalid Pokemon name: {api_pokemon_name}\n"
               "For megas, use the format \'pokemon-mega\'\n",
               "For regional forms, use the format \'pokemon-alola\' or \'pokemon-galar\'\n",
@@ -203,9 +203,8 @@ def main():
               "Exiting.")
         return
     
-    is_cached = check_cache(api_pokemon_name, cache_dir)
+    if not is_cached(api_pokemon_name, cache_dir): pull_pokedex_info(api_pokemon_name, cache_dir)
 
-    if not is_cached: pull_pokedex_info(api_pokemon_name, cache_dir)
     show_pokedex_info(api_pokemon_name, pretty_pokemon_name, cache_dir)
 
     return
