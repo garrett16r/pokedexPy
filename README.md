@@ -1,4 +1,4 @@
-# PokedexPy
+# pokedexPy
 A command-line Pokedex tool. Works for all current Pokemon (Gens 1-9) with all regional forms and mega evolutions.
 
 Developed as a way for me to practice my Python, REST API, caching, and JSON parsing skills using information I'm already very familiar with.
