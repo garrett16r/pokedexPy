@@ -1,4 +1,5 @@
 import sys, requests, json
+from type_matchups import get_single_weaknesses_and_resistances, get_multi_weaknesses_and_resistances
 from pathlib import Path
 
 # create local cache folder
@@ -8,15 +9,10 @@ from pathlib import Path
 # store results in cache folder
 # display pokedex info
 
-# TODO:
-# Add separate .py file for computing weaknesses/resistances
-# - Confirm logic behind more complex dual-type interactions
-# - How does one nullifying match-up mix with one super-effective match-up? Neutral or not very effective?
-
 api_pokemon_url = "https://pokeapi.co/api/v2/pokemon"
 api_type_url = "https://pokeapi.co/api/v2/type"
 
-def init() -> tuple[Path, Path]:
+def init() -> tuple[Path, Path, Path]:
     script_dir = Path(__file__).resolve().parent
     cache_dir = script_dir / "cache"
     types_dir = script_dir / "types"
@@ -71,7 +67,7 @@ def init() -> tuple[Path, Path]:
                 json.dump(type_json, f, ensure_ascii=False, indent=2)
                 f.close()
 
-    return cache_dir, pokemon_names_file
+    return cache_dir, types_dir, pokemon_names_file
 
 def normalize_name(raw_name: str) -> tuple[str, str]:
     prefixes = ["mega", "alolan", "galarian", "hisuian", "paldean"]
@@ -130,13 +126,13 @@ def pull_pokedex_info(api_pokemon_name: str, cache_dir: Path) -> None:
         f.close()
     return
 
-def show_pokedex_info(api_pokemon_name: str, pretty_pokemon_name: str, cache_dir: Path) -> None:
+def show_pokedex_info(api_pokemon_name: str, pretty_pokemon_name: str, cache_dir: Path, types_dir: Path) -> None:
 
     # Display:
     # Name (pkdex#)
     # Types
-    # Weaknesses?
-    # Resistances?
+    # Weaknesses
+    # Resistances
     # Abilities (indicate HA)
     # Sprite links
     # Cry link
@@ -151,16 +147,23 @@ def show_pokedex_info(api_pokemon_name: str, pretty_pokemon_name: str, cache_dir
 
     types = []
     for i in pokemon_data_json["types"]: types.append(i["type"]["name"])
-    if len(types) == 1: types = f"{types[0].capitalize()} type"
-    else: types = f"{types[0].capitalize()}/{types[1].capitalize()} type"
+    if len(types) == 1: 
+        types_str = f"{types[0].capitalize()} type"
+        weaknesses, resistances = get_single_weaknesses_and_resistances(types[0], types_dir)
+    else: 
+        types_str = f"{types[0].capitalize()}/{types[1].capitalize()} type"
+        weaknesses, resistances = get_multi_weaknesses_and_resistances(types[0], types[1], types_dir)
+    
+    weaknesses_str = " \n".join(f"  - {i[0].capitalize()} (x{i[1]})" for i in (weaknesses or []))
+    resistances_str = " \n".join(f"  - {i[0].capitalize()} (x{i[1]})" for i in (resistances or []))
 
     abilities = ""
     for i in pokemon_data_json["abilities"]:
         if len(pokemon_data_json["abilities"]) == 1: 
-            abilities += f"    {i["ability"]["name"].capitalize()}"
+            abilities += f"  - {i["ability"]["name"].capitalize()}"
         else:
-            if i["is_hidden"]: abilities += f"    {i["ability"]["name"].capitalize()} (Hidden)"
-            else: abilities += f"    {i["ability"]["name"].capitalize()}\n"
+            if i["is_hidden"]: abilities += f"  - {i["ability"]["name"].capitalize()} (Hidden)"
+            else: abilities += f"  - {i["ability"]["name"].capitalize()}\n"
 
     sprite_links = []
     sprite_links.append(pokemon_data_json["sprites"]["other"]["official-artwork"]["front_default"])
@@ -168,7 +171,11 @@ def show_pokedex_info(api_pokemon_name: str, pretty_pokemon_name: str, cache_dir
 
     cry_link = pokemon_data_json["cries"]["latest"]
 
-    print(f"{pretty_pokemon_name} (#{dex_num}) - {types}\n",
+    print(f"{pretty_pokemon_name} (#{dex_num}) - {types_str}\n",
+          "--------------------------\n",
+          f"Weaknesses:\n{weaknesses_str}\n",
+          "--------------------------\n",
+          f"Resistances:\n{resistances_str}\n"
           "--------------------------\n",
           f"Abilities:\n{abilities}\n",
           "--------------------------\n",
@@ -180,7 +187,7 @@ def show_pokedex_info(api_pokemon_name: str, pretty_pokemon_name: str, cache_dir
     return
 
 def main():
-    cache_dir, pokemon_names_file = init()
+    cache_dir, types_dir, pokemon_names_file = init()
 
     if len(sys.argv) < 2:
         print("ERROR: Incomplete command.\n",
@@ -193,7 +200,7 @@ def main():
     
     raw_name = " ".join(sys.argv[1:])
     api_pokemon_name, pretty_pokemon_name = normalize_name(raw_name) # api_pokemon_name is formatted for the API call, pretty_pokemon_name is formatted for human readability
-    
+
     if not is_valid_pokemon_name(api_pokemon_name, pokemon_names_file):
         print(f"ERROR: Invalid Pokemon name: {api_pokemon_name}\n"
               "For megas, use the format \'pokemon-mega\'\n",
@@ -205,7 +212,7 @@ def main():
     
     if not is_cached(api_pokemon_name, cache_dir): pull_pokedex_info(api_pokemon_name, cache_dir)
 
-    show_pokedex_info(api_pokemon_name, pretty_pokemon_name, cache_dir)
+    show_pokedex_info(api_pokemon_name, pretty_pokemon_name, cache_dir, types_dir)
 
     return
 
